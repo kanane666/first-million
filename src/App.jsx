@@ -5,13 +5,15 @@ import Saisie from './components/Saisie'
 import Competences from './components/Competences'
 import Stats from './components/Stats'
 import Backup from './components/Backup'
+import APropos from './components/APropos'
 
 const TABS = [
-  { id: 'dashboard', label: 'Accueil', icon: '🔥' },
-  { id: 'saisie',    label: 'Saisie',  icon: '➕' },
-  { id: 'stats',     label: 'Stats',   icon: '📊' },
-  { id: 'competences', label: 'Skills', icon: '🔧' },
-  { id: 'backup',    label: 'Backup',  icon: '💾' },
+  { id: 'dashboard',   label: 'Accueil', icon: '🔥' },
+  { id: 'saisie',      label: 'Saisie',  icon: '➕' },
+  { id: 'stats',       label: 'Stats',   icon: '📊' },
+  { id: 'competences', label: 'Skills',  icon: '🔧' },
+  { id: 'backup',      label: 'Backup',  icon: '💾' },
+  { id: 'apropos',     label: 'Mission', icon: '🦅' },
 ]
 
 function EpargneInput({ value, onChange }) {
@@ -83,13 +85,14 @@ export default function App() {
         {tab === 'stats'        && <Stats entries={entries} />}
         {tab === 'competences'  && <Competences timeEntries={timeEntries} onAddTime={addTime} onDeleteTime={deleteTime} />}
         {tab === 'backup'       && <Backup allData={allData} onImport={importData} />}
+        {tab === 'apropos'      && <APropos />}
       </main>
 
       <nav style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: 480, background: 'var(--bg1)',
         borderTop: '1px solid var(--border)',
-        display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)',
+        display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)',
         padding: '0.5rem 0 max(0.5rem, env(safe-area-inset-bottom))', zIndex: 20
       }}>
         {TABS.map(t => (
