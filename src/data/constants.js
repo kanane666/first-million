@@ -122,6 +122,41 @@ export function formatWeekLabel(weekStartStr) {
   return `${fmt(start)} – ${fmt(end)}`
 }
 
+// Seuils heures cumulées par skill pour progresser automatiquement
+export const SKILL_SEUILS = {
+  observe:  3,   // 3h  → Observé
+  pratique: 15,  // 15h → Pratiqué
+  autonome: 50,  // 50h → Autonome
+}
+
+// Calcule le niveau d'un skill selon les heures cumulées
+export function getSkillLevel(heures) {
+  if (heures >= SKILL_SEUILS.autonome) return 3
+  if (heures >= SKILL_SEUILS.pratique) return 2
+  if (heures >= SKILL_SEUILS.observe)  return 1
+  return 0
+}
+
+export const SKILL_LEVEL_LABELS = ['Pas encore', 'Observé', 'Pratiqué', 'Autonome']
+export const SKILL_LEVEL_COLORS = ['var(--text3)', '#f59e0b', '#3b82f6', '#22c55e']
+
+// Calcule les heures cumulées par skill depuis toutes les sessions de temps
+// timeEntries: [{ id, date, heures, note, skills: ['tuyauterie', ...] }]
+export function computeSkillHours(timeEntries) {
+  const map = {}
+  SKILLS_PLOMBERIE.forEach(s => { map[s.id] = 0 })
+  timeEntries.forEach(entry => {
+    if (!entry.skills || !entry.heures) return
+    const hParSkill = entry.heures / entry.skills.length
+    entry.skills.forEach(sid => {
+      if (map[sid] !== undefined) map[sid] += hParSkill
+    })
+  })
+  return map
+}
+
+
+
 export function getTodayKey() {
   return dateKey(new Date())
 }
@@ -129,4 +164,3 @@ export function getTodayKey() {
 export function getThisWeekKey() {
   return isoWeekKey(new Date())
 }
-
