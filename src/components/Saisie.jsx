@@ -45,15 +45,18 @@ export default function Saisie({ onAdd, entries, onDeleteEntry }) {
   const labelStyle = { fontSize: 12, color: 'var(--text3)', marginBottom: 6, display: 'block' }
 
   function handleSubmit() {
-    if (!montant || isNaN(parseFloat(montant))) return
+    const parsed = parseFloat(montant)
+    if (!montant || isNaN(parsed) || parsed <= 0) return
+    const parsedHeures = heures ? parseFloat(heures) : null
+    if (parsedHeures !== null && (isNaN(parsedHeures) || parsedHeures < 0)) return
     const entry = {
       id: Date.now(),
       type,
-      montant: parseFloat(montant),
+      montant: parsed,
       source: type === 'revenu' ? source : categorie,
       date,
       note,
-      heures: heures ? parseFloat(heures) : null,
+      heures: parsedHeures,
     }
     onAdd(entry)
     setMontant('')
@@ -89,6 +92,8 @@ export default function Saisie({ onAdd, entries, onDeleteEntry }) {
           <label style={labelStyle}>Montant (FCFA)</label>
           <input
             type="number"
+            min="0"
+            step="1"
             placeholder="0"
             value={montant}
             onChange={e => setMontant(e.target.value)}
@@ -122,7 +127,7 @@ export default function Saisie({ onAdd, entries, onDeleteEntry }) {
         {type === 'revenu' && (
           <div>
             <label style={labelStyle}>Heures travaillées (optionnel)</label>
-            <input type="number" placeholder="ex: 8" value={heures} onChange={e => setHeures(e.target.value)} style={inputStyle} />
+            <input type="number" min="0" step="0.5" placeholder="ex: 8" value={heures} onChange={e => setHeures(e.target.value)} style={inputStyle} />
           </div>
         )}
 
@@ -171,7 +176,7 @@ export default function Saisie({ onAdd, entries, onDeleteEntry }) {
                   <div style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, color: e.type === 'revenu' ? 'var(--green)' : 'var(--red)' }}>
                     {e.type === 'revenu' ? '+' : '−'}{formatFCFAFull(e.montant)}
                   </div>
-                  <button onClick={() => onDeleteEntry(e.id)} style={{ background: 'none', color: 'var(--text3)', fontSize: 16, padding: '0 4px', lineHeight: 1 }}>×</button>
+                  <button onClick={() => { if (window.confirm('Supprimer cette entrée ?')) onDeleteEntry(e.id) }} style={{ background: 'none', color: 'var(--text3)', fontSize: 16, padding: '0 4px', lineHeight: 1 }}>×</button>
                 </div>
               )
             })}

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useStorage } from './hooks/useStorage'
+import { DEFAULT_START_DATE } from './data/constants'
 import Dashboard from './components/Dashboard'
 import Saisie from './components/Saisie'
 import Competences from './components/Competences'
@@ -46,6 +47,7 @@ export default function App() {
   const [entries, setEntries]           = useStorage('phoenix_entries', [])
   const [timeEntries, setTimeEntries]   = useStorage('phoenix_time', [])
   const [epargneManuelle, setEpargneManuelle] = useStorage('phoenix_epargne', 0)
+  const [startDate, setStartDate]       = useStorage('phoenix_start_date', DEFAULT_START_DATE)
 
   const epargneCalculee = useMemo(() => {
     const revenus  = entries.filter(e => e.type === 'revenu').reduce((s, e) => s + e.montant, 0)
@@ -59,11 +61,12 @@ export default function App() {
   function deleteTime(id)     { setTimeEntries(prev => prev.filter(e => e.id !== id)) }
 
   // Données complètes pour export/import
-  const allData = { entries, timeEntries, epargneManuelle }
+  const allData = { entries, timeEntries, epargneManuelle, startDate }
   function importData(data) {
     if (data.entries)        setEntries(data.entries)
     if (data.timeEntries)    setTimeEntries(data.timeEntries)
     if (data.epargneManuelle !== undefined) setEpargneManuelle(data.epargneManuelle)
+    if (data.startDate)      setStartDate(data.startDate)
   }
 
   return (
@@ -80,11 +83,11 @@ export default function App() {
       </header>
 
       <main style={{ flex: 1, padding: '1rem 1.25rem 5rem', overflowY: 'auto' }}>
-        {tab === 'dashboard'    && <Dashboard entries={entries} epargne={epargneCalculee} />}
+        {tab === 'dashboard'    && <Dashboard entries={entries} epargne={epargneCalculee} epargneInitiale={epargneManuelle} startDate={startDate} />}
         {tab === 'saisie'       && <Saisie onAdd={addEntry} entries={entries} onDeleteEntry={deleteEntry} />}
         {tab === 'stats'        && <Stats entries={entries} />}
         {tab === 'competences'  && <Competences timeEntries={timeEntries} onAddTime={addTime} onDeleteTime={deleteTime} />}
-        {tab === 'backup'       && <Backup allData={allData} onImport={importData} />}
+        {tab === 'backup'       && <Backup allData={allData} onImport={importData} startDate={startDate} onChangeStartDate={setStartDate} />}
         {tab === 'apropos'      && <APropos />}
       </main>
 

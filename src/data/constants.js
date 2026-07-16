@@ -1,5 +1,5 @@
 export const OBJECTIF = 1_000_000
-export const START_DATE = '2026-07-14' // début plomberie dans 2 semaines
+export const DEFAULT_START_DATE = '2026-07-14' // valeur par défaut, modifiable dans Backup/Réglages
 export const TOTAL_MONTHS = 15
 
 // Règle d'or du plan : 2 500 FCFA / jour, 5 jours / semaine = 12 500 FCFA / semaine
@@ -64,6 +64,47 @@ export function getMonthsElapsed(startDate) {
   const start = new Date(startDate)
   const now = new Date()
   return Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()))
+}
+
+// Regroupe des entrées par source/catégorie et calcule le total pour un type donné.
+// Utilisé à la fois par le Dashboard et les Stats pour éviter la duplication de logique.
+export function computeSourceTotals(entries, sourceList, type = 'revenu') {
+  return sourceList
+    .map(s => ({
+      ...s,
+      total: entries
+        .filter(e => e.type === type && e.source === s.id)
+        .reduce((sum, e) => sum + e.montant, 0),
+    }))
+    .filter(s => s.total > 0)
+}
+
+// Calcule l'épargne cumulée réelle mois par mois depuis le début du plan,
+// pour pouvoir la comparer à la courbe de projection sur le Dashboard.
+// Retourne un tableau de longueur totalMonths+1, avec `undefined` après le mois en cours
+// (pour que la courbe s'arrête à "aujourd'hui" plutôt que de retomber à 0).
+export function computeCumulativeReal(entries, startDate, totalMonths, epargneInitiale = 0) {
+  const start = new Date(startDate)
+  const startMonthIndex = start.getFullYear() * 12 + start.getMonth()
+  const monthsElapsed = getMonthsElapsed(startDate)
+
+  const deltaByMonth = {}
+  entries.forEach(e => {
+    const d = new Date(e.date)
+    const idx = d.getFullYear() * 12 + d.getMonth() - startMonthIndex
+    if (idx < 0) return // entrée antérieure au début du plan : ignorée pour cette courbe
+    const delta = e.type === 'revenu' ? e.montant : -e.montant
+    deltaByMonth[idx] = (deltaByMonth[idx] || 0) + delta
+  })
+
+  let cumul = epargneInitiale
+  const result = []
+  for (let i = 0; i <= totalMonths; i++) {
+    if (i > monthsElapsed) { result.push(undefined); continue }
+    cumul += deltaByMonth[i] || 0
+    result.push(Math.max(0, cumul))
+  }
+  return result
 }
 
 // --- Utilitaires jour / semaine ---

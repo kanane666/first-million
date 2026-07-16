@@ -25,7 +25,7 @@ function Btn({ onClick, color = 'var(--accent)', children, disabled }) {
   )
 }
 
-export default function Backup({ allData, onImport }) {
+export default function Backup({ allData, onImport, startDate, onChangeStartDate }) {
   const [importStatus, setImportStatus] = useState(null) // null | 'ok' | 'error'
   const [codeCopied, setCodeCopied] = useState(false)
   const [codeImportVal, setCodeImportVal] = useState('')
@@ -58,6 +58,10 @@ export default function Backup({ allData, onImport }) {
       try {
         const parsed = JSON.parse(ev.target.result)
         if (!parsed.entries && !parsed.timeEntries) throw new Error('Format invalide')
+        if (!window.confirm('Restaurer ce backup va remplacer toutes tes données actuelles. Continuer ?')) {
+          e.target.value = ''
+          return
+        }
         onImport(parsed)
         setImportStatus('ok')
         setTimeout(() => setImportStatus(null), 3000)
@@ -84,6 +88,7 @@ export default function Backup({ allData, onImport }) {
     try {
       const decoded = JSON.parse(decodeURIComponent(escape(atob(codeImportVal.trim()))))
       if (!decoded.entries && !decoded.timeEntries) throw new Error('invalide')
+      if (!window.confirm('Restaurer ce backup va remplacer toutes tes données actuelles. Continuer ?')) return
       onImport(decoded)
       setCodeImportStatus('ok')
       setCodeImportVal('')
@@ -118,6 +123,23 @@ export default function Backup({ allData, onImport }) {
           <div style={{ fontSize: 11, color: 'var(--text3)' }}>Épargne init.</div>
         </div>
       </div>
+
+      {/* Réglages */}
+      <Section title="⚙️ Réglages — Date de début du plan">
+        <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 8 }}>
+          Cette date sert de référence pour calculer ta phase actuelle et ta progression sur 15 mois.
+          Modifie-la si ton début réel diffère de la valeur par défaut.
+        </div>
+        <input
+          type="date"
+          value={startDate}
+          onChange={e => onChangeStartDate(e.target.value)}
+          style={{
+            width: '100%', background: 'var(--bg2)', border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text)', fontSize: 14
+          }}
+        />
+      </Section>
 
       {/* EXPORT — Fichier JSON */}
       <Section title="📤 Exporter — Fichier JSON">

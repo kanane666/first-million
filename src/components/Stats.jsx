@@ -3,8 +3,8 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, Refere
 import {
   SOURCES, CATEGORIES_DEPENSE, formatFCFAFull, formatFCFA,
   OBJECTIF_JOUR, OBJECTIF_SEMAINE,
-  groupByDay, groupByWeek, formatDayLabel, formatWeekLabel,
-  getTodayKey, getThisWeekKey
+  groupByDay, groupByWeek,
+  getTodayKey, getThisWeekKey, computeSourceTotals
 } from '../data/constants'
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -110,7 +110,12 @@ function JalonSuivi({ entries, period }) {
           </div>
         </div>
         <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem' }}>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text2)', marginBottom: '0.5rem' }}>14 derniers jours</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text2)' }}>14 derniers jours</div>
+            <div style={{ fontSize: 12, color: streak > 0 ? 'var(--green)' : 'var(--text3)', fontWeight: 600 }}>
+              {streak > 0 ? `🔥 série de ${streak}j` : 'aucune série en cours'}
+            </div>
+          </div>
           <div style={{ display: 'flex', gap: 12, marginBottom: 8, fontSize: 11, color: 'var(--text3)' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: '#22c55e', display: 'inline-block' }} />Objectif atteint</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: '#ef4444', display: 'inline-block' }} />Manqué</span>
@@ -172,19 +177,9 @@ export default function Stats({ entries }) {
     }))
   }, [entries])
 
-  const sourceData = useMemo(() => {
-    return SOURCES.map(s => ({
-      ...s,
-      total: entries.filter(e => e.type === 'revenu' && e.source === s.id).reduce((sum, e) => sum + e.montant, 0)
-    })).filter(s => s.total > 0)
-  }, [entries])
+  const sourceData = useMemo(() => computeSourceTotals(entries, SOURCES, 'revenu'), [entries])
 
-  const depenseData = useMemo(() => {
-    return CATEGORIES_DEPENSE.map(s => ({
-      ...s,
-      total: entries.filter(e => e.type === 'depense' && e.source === s.id).reduce((sum, e) => sum + e.montant, 0)
-    })).filter(s => s.total > 0)
-  }, [entries])
+  const depenseData = useMemo(() => computeSourceTotals(entries, CATEGORIES_DEPENSE, 'depense'), [entries])
 
   const totalRev = entries.filter(e => e.type === 'revenu').reduce((s, e) => s + e.montant, 0)
   const totalDep = entries.filter(e => e.type === 'depense').reduce((s, e) => s + e.montant, 0)

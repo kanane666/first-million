@@ -65,8 +65,9 @@ function SessionLogger({ onAdd }) {
   }
 
   function handleAdd() {
-    if (!heures || isNaN(parseFloat(heures)) || selected.length === 0) return
-    onAdd({ id: Date.now(), heures: parseFloat(heures), date, note, skills: selected })
+    const parsed = parseFloat(heures)
+    if (!heures || isNaN(parsed) || parsed <= 0 || selected.length === 0) return
+    onAdd({ id: Date.now(), heures: parsed, date, note, skills: selected })
     setHeures('')
     setNote('')
     setSelected([])
@@ -92,7 +93,7 @@ function SessionLogger({ onAdd }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: '0.75rem' }}>
         <div>
           <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>Heures</div>
-          <input type="number" placeholder="ex: 6" value={heures}
+          <input type="number" min="0" step="0.5" placeholder="ex: 6" value={heures}
             onChange={e => setHeures(e.target.value)} style={inputS} />
         </div>
         <div>
@@ -186,7 +187,7 @@ function SessionHistory({ timeEntries, onDelete }) {
                 })}
               </div>
             </div>
-            <button onClick={() => onDelete(e.id)} style={{
+            <button onClick={() => { if (window.confirm('Supprimer cette session ?')) onDelete(e.id) }} style={{
               background: 'none', color: 'var(--text3)', fontSize: 16,
               padding: '0 2px', lineHeight: 1, cursor: 'pointer', flexShrink: 0
             }}>×</button>

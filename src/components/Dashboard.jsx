@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine } from 'recharts'
 import {
-  OBJECTIF, SOURCES, PHASES, formatFCFA, formatFCFAFull, getCurrentPhase, getMonthsElapsed, START_DATE, TOTAL_MONTHS,
-  OBJECTIF_JOUR, OBJECTIF_SEMAINE, groupByDay, groupByWeek, getTodayKey, getThisWeekKey
+  OBJECTIF, SOURCES, formatFCFA, formatFCFAFull, getCurrentPhase, getMonthsElapsed, TOTAL_MONTHS,
+  OBJECTIF_JOUR, OBJECTIF_SEMAINE, groupByDay, groupByWeek, getTodayKey, getThisWeekKey,
+  computeSourceTotals, computeCumulativeReal
 } from '../data/constants'
 
 const REALISTE = [0,3000,8000,30000,65000,110000,165000,235000,310000,400000,490000,590000,700000,790000,890000,1000000]
@@ -67,35 +68,25 @@ const CustomTooltip = ({ active, payload, label }) => {
   )
 }
 
-export default function Dashboard({ entries, epargne }) {
+export default function Dashboard({ entries, epargne, epargneInitiale = 0, startDate }) {
   const totalRevenu = useMemo(() => entries.filter(e => e.type === 'revenu').reduce((s, e) => s + e.montant, 0), [entries])
   const totalDepense = useMemo(() => entries.filter(e => e.type === 'depense').reduce((s, e) => s + e.montant, 0), [entries])
   const totalEpargne = epargne
   const pct = Math.min(100, (totalEpargne / OBJECTIF) * 100)
   const reste = Math.max(0, OBJECTIF - totalEpargne)
-  const monthsElapsed = getMonthsElapsed(START_DATE)
+  const monthsElapsed = getMonthsElapsed(startDate)
   const phase = getCurrentPhase(monthsElapsed)
 
-  const bySource = useMemo(() => {
-    return SOURCES.map(s => ({
-      ...s,
-      total: entries.filter(e => e.type === 'revenu' && e.source === s.id).reduce((sum, e) => sum + e.montant, 0)
-    })).filter(s => s.total > 0)
-  }, [entries])
+  const bySource = useMemo(() => computeSourceTotals(entries, SOURCES, 'revenu'), [entries])
 
   const chartData = useMemo(() => {
-    const monthMap = {}
-    entries.filter(e => e.type === 'revenu').forEach(e => {
-      const d = new Date(e.date)
-      const m = d.getFullYear() * 12 + d.getMonth()
-      monthMap[m] = (monthMap[m] || 0) + e.montant
-    })
+    const reelParMois = computeCumulativeReal(entries, startDate, TOTAL_MONTHS, epargneInitiale)
     return REALISTE.map((rev, i) => ({
       mois: i,
       realiste: rev,
-      reel: i === 0 ? 0 : undefined
+      reel: reelParMois[i]
     }))
-  }, [entries])
+  }, [entries, startDate, epargneInitiale])
 
   const thisMonth = useMemo(() => {
     const now = new Date()
@@ -162,7 +153,7 @@ export default function Dashboard({ entries, epargne }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: '1rem' }}>
         <StatCard label="Ce mois" value={formatFCFA(thisMonth)} color="var(--green)" icon="📈" sub={`objectif ${formatFCFA(phase.revMin)}–${formatFCFA(phase.revMax)}`} />
         <StatCard label="Total revenus" value={formatFCFA(totalRevenu)} color="var(--blue)" icon="💵" sub="depuis le début" />
-        <StatCard label="Total dépenses" value={formatFCFA(totalDepense)} color="var(--red)" icon="💸" sub="ce mois inclus" />
+        <StatCard label="Total dépenses" value={formatFCFA(totalDepense)} color="var(--red)" icon="💸" sub="depuis le début" />
         <StatCard label="Mois restants" value={Math.max(0, TOTAL_MONTHS - monthsElapsed)} color="var(--amber)" icon="⏳" sub={`sur ${TOTAL_MONTHS} au total`} />
       </div>
 
