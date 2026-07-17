@@ -215,6 +215,14 @@ export default function Stats({ entries }) {
     return { totalH: Math.round(totalH), tauxHoraire: Math.round(totalM / totalH) }
   }, [entries])
 
+  const currentMonth = useMemo(() => {
+    const now = new Date()
+    const key = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
+    return monthlyData.find(m => m.key === key) || null
+  }, [monthlyData])
+  const seuilDepenseRatio = currentMonth && currentMonth.revenu > 0 ? currentMonth.depense / currentMonth.revenu : 0
+  const alerteDepenses = currentMonth && currentMonth.depense > 0 && (currentMonth.depense >= currentMonth.revenu || seuilDepenseRatio > 0.5)
+
   return (
     <div style={{ paddingBottom: '2rem' }}>
       {/* Filtre période - toujours visible, c'est la priorité demandée */}
@@ -251,6 +259,18 @@ export default function Stats({ entries }) {
             </div>
           ) : (
             <>
+              {alerteDepenses && (
+                <div style={{
+                  background: currentMonth.depense >= currentMonth.revenu ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)',
+                  border: `1px solid ${currentMonth.depense >= currentMonth.revenu ? 'var(--red)' : 'var(--amber)'}`,
+                  borderRadius: 'var(--radius)', padding: '0.7rem 0.9rem', marginBottom: '1rem', fontSize: 12,
+                  color: currentMonth.depense >= currentMonth.revenu ? 'var(--red)' : 'var(--amber)', fontWeight: 500
+                }}>
+                  ⚠️ {currentMonth.depense >= currentMonth.revenu
+                    ? `Ce mois-ci, tes dépenses (${formatFCFA(currentMonth.depense)}) dépassent tes revenus (${formatFCFA(currentMonth.revenu)}).`
+                    : `Tes dépenses représentent ${Math.round(seuilDepenseRatio * 100)}% de tes revenus ce mois-ci (seuil recommandé : 50%).`}
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: '1rem' }}>
                 <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.75rem', textAlign: 'center' }}>
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>Taux d'épargne</div>

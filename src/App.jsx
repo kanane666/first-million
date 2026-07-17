@@ -48,6 +48,7 @@ export default function App() {
   const [timeEntries, setTimeEntries]   = useStorage('phoenix_time', [])
   const [epargneManuelle, setEpargneManuelle] = useStorage('phoenix_epargne', 0)
   const [startDate, setStartDate]       = useStorage('phoenix_start_date', DEFAULT_START_DATE)
+  const [reserveImprevus, setReserveImprevus] = useStorage('phoenix_reserve', 0)
 
   const epargneCalculee = useMemo(() => {
     const revenus  = entries.filter(e => e.type === 'revenu').reduce((s, e) => s + e.montant, 0)
@@ -61,12 +62,13 @@ export default function App() {
   function deleteTime(id)     { setTimeEntries(prev => prev.filter(e => e.id !== id)) }
 
   // Données complètes pour export/import
-  const allData = { entries, timeEntries, epargneManuelle, startDate }
+  const allData = { entries, timeEntries, epargneManuelle, startDate, reserveImprevus }
   function importData(data) {
     if (data.entries)        setEntries(data.entries)
     if (data.timeEntries)    setTimeEntries(data.timeEntries)
     if (data.epargneManuelle !== undefined) setEpargneManuelle(data.epargneManuelle)
     if (data.startDate)      setStartDate(data.startDate)
+    if (data.reserveImprevus !== undefined) setReserveImprevus(data.reserveImprevus)
   }
 
   return (
@@ -83,11 +85,11 @@ export default function App() {
       </header>
 
       <main style={{ flex: 1, padding: '1rem 1.25rem 5rem', overflowY: 'auto' }}>
-        {tab === 'dashboard'    && <Dashboard entries={entries} epargne={epargneCalculee} epargneInitiale={epargneManuelle} startDate={startDate} />}
+        {tab === 'dashboard'    && <Dashboard entries={entries} epargne={epargneCalculee} epargneInitiale={epargneManuelle} startDate={startDate} reserveImprevus={reserveImprevus} />}
         {tab === 'saisie'       && <Saisie onAdd={addEntry} entries={entries} onDeleteEntry={deleteEntry} />}
         {tab === 'stats'        && <Stats entries={entries} />}
         {tab === 'competences'  && <Competences timeEntries={timeEntries} onAddTime={addTime} onDeleteTime={deleteTime} />}
-        {tab === 'backup'       && <Backup allData={allData} onImport={importData} startDate={startDate} onChangeStartDate={setStartDate} />}
+        {tab === 'backup'       && <Backup allData={allData} onImport={importData} startDate={startDate} onChangeStartDate={setStartDate} reserveImprevus={reserveImprevus} onChangeReserve={setReserveImprevus} />}
         {tab === 'apropos'      && <APropos />}
       </main>
 

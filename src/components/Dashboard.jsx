@@ -3,7 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceL
 import {
   OBJECTIF, SOURCES, formatFCFA, formatFCFAFull, getCurrentPhase, getMonthsElapsed, TOTAL_MONTHS,
   OBJECTIF_JOUR, OBJECTIF_SEMAINE, groupByDay, groupByWeek, getTodayKey, getThisWeekKey,
-  computeSourceTotals, computeCumulativeReal
+  computeSourceTotals, computeCumulativeReal, computeProjection
 } from '../data/constants'
 
 const REALISTE = [0,3000,8000,30000,65000,110000,165000,235000,310000,400000,490000,590000,700000,790000,890000,1000000]
@@ -68,7 +68,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   )
 }
 
-export default function Dashboard({ entries, epargne, epargneInitiale = 0, startDate }) {
+export default function Dashboard({ entries, epargne, epargneInitiale = 0, startDate, reserveImprevus = 0 }) {
   const totalRevenu = useMemo(() => entries.filter(e => e.type === 'revenu').reduce((s, e) => s + e.montant, 0), [entries])
   const totalDepense = useMemo(() => entries.filter(e => e.type === 'depense').reduce((s, e) => s + e.montant, 0), [entries])
   const totalEpargne = epargne
@@ -76,6 +76,7 @@ export default function Dashboard({ entries, epargne, epargneInitiale = 0, start
   const reste = Math.max(0, OBJECTIF - totalEpargne)
   const monthsElapsed = getMonthsElapsed(startDate)
   const phase = getCurrentPhase(monthsElapsed)
+  const projection = useMemo(() => computeProjection(totalEpargne, startDate, TOTAL_MONTHS, OBJECTIF), [totalEpargne, startDate])
 
   const bySource = useMemo(() => computeSourceTotals(entries, SOURCES, 'revenu'), [entries])
 
@@ -133,7 +134,28 @@ export default function Dashboard({ entries, epargne, epargneInitiale = 0, start
         </div>
       </div>
 
-      {/* Objectifs jour / semaine - la bataille quotidienne */}
+      {/* Projection réaliste basée sur le rythme actuel */}
+      {projection.ready && (
+        <div style={{
+          background: projection.onTrack ? 'var(--green-dim)' : 'var(--bg1)',
+          border: `1px solid ${projection.onTrack ? 'var(--green)' : (projection.ratePerMonth <= 0 ? 'var(--red)' : 'var(--amber)')}`,
+          borderRadius: 'var(--radius)', padding: '0.85rem 1rem', marginBottom: '1rem'
+        }}>
+          <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 2 }}>📡 Projection à ton rythme actuel</div>
+          {projection.ratePerMonth <= 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--red)', fontWeight: 600 }}>
+              À ce rythme (dépenses ≥ revenus), tu n'atteins pas l'objectif — il faut inverser la tendance.
+            </div>
+          ) : (
+            <div style={{ fontSize: 13, fontWeight: 600, color: projection.onTrack ? 'var(--green)' : 'var(--amber)' }}>
+              ~{formatFCFA(projection.ratePerMonth)}/mois net → objectif atteint vers le mois {Math.ceil(projection.moisTotalEstime)}
+              {projection.onTrack
+                ? ` (dans les temps sur ${TOTAL_MONTHS})`
+                : ` (soit ${Math.ceil(projection.moisTotalEstime - TOTAL_MONTHS)} mois de retard sur le plan)`}
+            </div>
+          )}
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 10, marginBottom: '1rem' }}>
         <JalonMiniCard label="🎯 Aujourd'hui" value={todayTotal} target={OBJECTIF_JOUR} />
         <JalonMiniCard label="📅 Cette semaine" value={weekTotal} target={OBJECTIF_SEMAINE} sub={`· ${weekJoursActifs}/5 jours`} />
@@ -156,6 +178,17 @@ export default function Dashboard({ entries, epargne, epargneInitiale = 0, start
         <StatCard label="Total dépenses" value={formatFCFA(totalDepense)} color="var(--red)" icon="💸" sub="depuis le début" />
         <StatCard label="Mois restants" value={Math.max(0, TOTAL_MONTHS - monthsElapsed)} color="var(--amber)" icon="⏳" sub={`sur ${TOTAL_MONTHS} au total`} />
       </div>
+
+      {/* Réserve imprévus */}
+      {reserveImprevus > 0 && (
+        <div style={{
+          background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+          padding: '0.75rem 1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+        }}>
+          <span style={{ fontSize: 12, color: 'var(--text2)' }}>🛟 Réserve imprévus <span style={{ color: 'var(--text3)' }}>(hors objectif)</span></span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)' }}>{formatFCFA(reserveImprevus)}</span>
+        </div>
+      )}
 
       {/* Courbe projection */}
       <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem', marginBottom: '1rem' }}>

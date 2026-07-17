@@ -50,6 +50,26 @@ export function getCurrentPhase(monthsElapsed) {
   return PHASES[3]
 }
 
+// Projette, à partir du rythme d'épargne nette observé depuis le début du plan,
+// dans combien de mois l'objectif sera réellement atteint (peut être avant ou après les 15 mois prévus).
+export function computeProjection(epargne, startDate, totalMonths, objectif) {
+  const start = new Date(startDate)
+  const now = new Date()
+  const daysElapsed = Math.floor((now - start) / 86400000)
+  if (daysElapsed < 3) return { ready: false } // pas assez de recul pour projeter sérieusement
+
+  const ratePerDay = epargne / daysElapsed
+  const ratePerMonth = ratePerDay * 30
+  const reste = Math.max(0, objectif - epargne)
+
+  if (ratePerDay <= 0) {
+    return { ready: true, ratePerMonth, onTrack: false, moisTotalEstime: null }
+  }
+  const joursRestants = reste / ratePerDay
+  const moisTotalEstime = daysElapsed / 30 + joursRestants / 30
+  return { ready: true, ratePerMonth, onTrack: moisTotalEstime <= totalMonths + 0.5, moisTotalEstime }
+}
+
 export function formatFCFA(n) {
   const sign = n < 0 ? '-' : ''
   const abs = Math.abs(n)

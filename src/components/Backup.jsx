@@ -25,17 +25,32 @@ function Btn({ onClick, color = 'var(--accent)', children, disabled }) {
   )
 }
 
-export default function Backup({ allData, onImport, startDate, onChangeStartDate }) {
+export default function Backup({ allData, onImport, startDate, onChangeStartDate, reserveImprevus, onChangeReserve }) {
   const [importStatus, setImportStatus] = useState(null) // null | 'ok' | 'error'
   const [codeCopied, setCodeCopied] = useState(false)
   const [codeImportVal, setCodeImportVal] = useState('')
   const [codeImportStatus, setCodeImportStatus] = useState(null)
+  const [reserveInput, setReserveInput] = useState('')
   const fileRef = useRef()
 
   const dataStr = JSON.stringify(allData, null, 2)
   const entriesCount = allData.entries?.length ?? 0
   const sessionsCount = allData.timeEntries?.length ?? 0
   const epargne = allData.epargneManuelle ?? 0
+
+  // — Réserve imprévus —
+  function handleAddReserve() {
+    const n = parseFloat(reserveInput)
+    if (!n || isNaN(n) || n <= 0) return
+    onChangeReserve((reserveImprevus || 0) + n)
+    setReserveInput('')
+  }
+  function handleWithdrawReserve() {
+    const n = parseFloat(reserveInput)
+    if (!n || isNaN(n) || n <= 0) return
+    onChangeReserve(Math.max(0, (reserveImprevus || 0) - n))
+    setReserveInput('')
+  }
 
   // — Export JSON fichier —
   function handleExportFile() {
@@ -139,6 +154,41 @@ export default function Backup({ allData, onImport, startDate, onChangeStartDate
             borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text)', fontSize: 14
           }}
         />
+      </Section>
+
+      {/* Réserve imprévus */}
+      <Section title="🛟 Réserve imprévus">
+        <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 8 }}>
+          Une réserve séparée de l'objectif million, pour absorber les coups durs (réparation, santé, etc.)
+          sans entamer ta progression. Alimente-la volontairement avec une partie de tes revenus.
+        </div>
+        <div style={{
+          textAlign: 'center', padding: '0.75rem', marginBottom: 10,
+          background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)'
+        }}>
+          <div style={{ fontSize: 11, color: 'var(--text3)' }}>Réserve actuelle</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--accent)' }}>
+            {(reserveImprevus || 0).toLocaleString('fr-FR')} FCFA
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <input
+            type="number" min="0" placeholder="Montant"
+            value={reserveInput} onChange={e => setReserveInput(e.target.value)}
+            style={{
+              flex: 1, background: 'var(--bg2)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text)', fontSize: 14
+            }}
+          />
+          <button onClick={handleAddReserve} style={{
+            padding: '0 16px', borderRadius: 'var(--radius-sm)', border: 'none',
+            background: 'var(--green)', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer'
+          }}>+ Ajouter</button>
+          <button onClick={handleWithdrawReserve} style={{
+            padding: '0 16px', borderRadius: 'var(--radius-sm)', border: 'none',
+            background: 'var(--bg3)', color: 'var(--text2)', fontWeight: 600, fontSize: 13, cursor: 'pointer'
+          }}>− Utiliser</button>
+        </div>
       </Section>
 
       {/* EXPORT — Fichier JSON */}
