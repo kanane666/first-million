@@ -51,6 +51,7 @@ function JalonSuivi({ entries, period }) {
   const dayData = useMemo(() => {
     if (period !== 'jour') return []
     const byDay = groupByDay(entries)
+    const byDayDep = groupByDay(entries, 'depense')
     const days = []
     const now = new Date()
     for (let i = 13; i >= 0; i--) {
@@ -61,6 +62,7 @@ function JalonSuivi({ entries, period }) {
         key: k,
         label: d.toLocaleDateString('fr-FR', { weekday: 'short' }).slice(0,3),
         total: byDay[k] || 0,
+        depense: byDayDep[k] || 0,
         target: OBJECTIF_JOUR,
         isCurrent: k === todayKey,
       })
@@ -71,11 +73,13 @@ function JalonSuivi({ entries, period }) {
   const weekData = useMemo(() => {
     if (period !== 'semaine') return []
     const byWeek = groupByWeek(entries)
+    const byWeekDep = groupByWeek(entries, 'depense')
     const weeks = Object.values(byWeek).sort((a,b) => a.weekStart.localeCompare(b.weekStart))
     return weeks.slice(-10).map(w => ({
       key: w.weekStart,
       label: new Date(w.weekStart).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
       total: w.total,
+      depense: byWeekDep[w.weekStart]?.total || 0,
       target: OBJECTIF_SEMAINE,
       isCurrent: w.weekStart === weekKey,
       joursActifs: Object.keys(w.days).length,
@@ -108,6 +112,14 @@ function JalonSuivi({ entries, period }) {
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>{joursReussis}/14</div>
             <div style={{ fontSize: 10, color: 'var(--text3)' }}>≥ {formatFCFA(OBJECTIF_JOUR)}/jour</div>
           </div>
+        </div>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+          padding: '0.6rem 0.9rem', marginBottom: '1rem', fontSize: 12
+        }}>
+          <span style={{ color: 'var(--text3)' }}>Dépenses aujourd'hui : <b style={{ color: 'var(--red)' }}>{formatFCFA(today?.depense || 0)}</b></span>
+          <span style={{ color: 'var(--text3)' }}>Net : <b style={{ color: (today?.total || 0) - (today?.depense || 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>{formatFCFA((today?.total || 0) - (today?.depense || 0))}</b></span>
         </div>
         <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
@@ -144,6 +156,14 @@ function JalonSuivi({ entries, period }) {
           <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>{thisWeek?.joursActifs || 0}/5</div>
           <div style={{ fontSize: 10, color: 'var(--text3)' }}>min. 5 jours travaillés</div>
         </div>
+      </div>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+        padding: '0.6rem 0.9rem', marginBottom: '1rem', fontSize: 12
+      }}>
+        <span style={{ color: 'var(--text3)' }}>Dépenses cette semaine : <b style={{ color: 'var(--red)' }}>{formatFCFA(thisWeek?.depense || 0)}</b></span>
+        <span style={{ color: 'var(--text3)' }}>Net : <b style={{ color: (thisWeek?.total || 0) - (thisWeek?.depense || 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>{formatFCFA((thisWeek?.total || 0) - (thisWeek?.depense || 0))}</b></span>
       </div>
       <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem' }}>
         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text2)', marginBottom: '0.5rem' }}>10 dernières semaines · {semainesReussies}/{weekData.length} réussies</div>
@@ -183,7 +203,9 @@ export default function Stats({ entries }) {
 
   const totalRev = entries.filter(e => e.type === 'revenu').reduce((s, e) => s + e.montant, 0)
   const totalDep = entries.filter(e => e.type === 'depense').reduce((s, e) => s + e.montant, 0)
-  const txEpargne = totalRev > 0 ? Math.round(((totalRev - totalDep) / totalRev) * 100) : 0
+  const epargneNette = totalRev - totalDep
+  const txEpargne = totalRev > 0 ? Math.round((epargneNette / totalRev) * 100) : 0
+  const txEpargneAffiche = Math.max(-100, txEpargne) // le montant réel (epargneNette) reste visible à côté, ceci n'est que l'indicateur %
 
   const heuresData = useMemo(() => {
     const rev = entries.filter(e => e.type === 'revenu' && e.heures)
@@ -229,11 +251,16 @@ export default function Stats({ entries }) {
             </div>
           ) : (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: '1rem' }}>
                 <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.75rem', textAlign: 'center' }}>
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>Taux d'épargne</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: txEpargne >= 70 ? 'var(--green)' : txEpargne >= 50 ? 'var(--amber)' : 'var(--red)' }}>{txEpargne}%</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: txEpargne >= 70 ? 'var(--green)' : txEpargne >= 50 ? 'var(--amber)' : 'var(--red)' }}>{txEpargneAffiche}{txEpargne < -100 ? '−' : ''}%</div>
                   <div style={{ fontSize: 10, color: 'var(--text3)' }}>objectif ≥ 70%</div>
+                </div>
+                <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.75rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>Épargne nette</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: epargneNette >= 0 ? 'var(--green)' : 'var(--red)' }}>{formatFCFA(epargneNette)}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>revenus − dépenses</div>
                 </div>
                 <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.75rem', textAlign: 'center' }}>
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>Revenu total</div>

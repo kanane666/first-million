@@ -51,9 +51,11 @@ export function getCurrentPhase(monthsElapsed) {
 }
 
 export function formatFCFA(n) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(2).replace('.00','') + 'M FCFA'
-  if (n >= 1000) return Math.round(n / 1000) + 'k FCFA'
-  return Math.round(n).toLocaleString('fr-FR') + ' FCFA'
+  const sign = n < 0 ? '-' : ''
+  const abs = Math.abs(n)
+  if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(2).replace('.00','') + 'M FCFA'
+  if (abs >= 1000) return sign + Math.round(abs / 1000) + 'k FCFA'
+  return sign + Math.round(abs).toLocaleString('fr-FR') + ' FCFA'
 }
 
 export function formatFCFAFull(n) {
@@ -128,20 +130,20 @@ function isoWeekKey(d) {
   return dateKey(start)
 }
 
-// Regroupe les revenus par jour : { '2026-07-14': montant }
-export function groupByDay(entries) {
+// Regroupe les entrées d'un type donné par jour : { '2026-07-14': montant }
+export function groupByDay(entries, type = 'revenu') {
   const map = {}
-  entries.filter(e => e.type === 'revenu').forEach(e => {
+  entries.filter(e => e.type === type).forEach(e => {
     const k = dateKey(e.date)
     map[k] = (map[k] || 0) + e.montant
   })
   return map
 }
 
-// Regroupe les revenus par semaine (lundi → dimanche) : { '2026-07-13': { total, days: {date: montant} } }
-export function groupByWeek(entries) {
+// Regroupe les entrées d'un type donné par semaine (lundi → dimanche) : { '2026-07-13': { total, days: {date: montant} } }
+export function groupByWeek(entries, type = 'revenu') {
   const map = {}
-  entries.filter(e => e.type === 'revenu').forEach(e => {
+  entries.filter(e => e.type === type).forEach(e => {
     const wk = isoWeekKey(e.date)
     if (!map[wk]) map[wk] = { weekStart: wk, total: 0, days: {} }
     map[wk].total += e.montant
